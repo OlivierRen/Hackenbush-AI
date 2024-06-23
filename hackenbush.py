@@ -1,3 +1,12 @@
+# https://www.javatpoint.com/mini-max-algorithm-in-ai (contains pseudo code for minimax algo)
+
+# Minmax at line 155
+# TODO - bot is what color
+# - which color is associated with which value of terminal nodes
+# - implement alpha-beta pruning
+# - Currently im writing the code where the simulated_game function does all the work, 
+# theres probably a way to use both functions later 
+
 from collections import defaultdict, deque
 from functools import partial
 from itertools import count, repeat, compress
@@ -121,6 +130,44 @@ def game(edges, colors, player: Color, drawer):
     # continue the game
     game(edges, colors, player.other, drawer)
 
+def simulated_game(edges, colors, player: Color):
+    '''Simulated game used by the minmax bot. If the position is won for blue, 
+    it is a terminal node with value of +infinity, the inverse is true for read.'''
+    possible = list(compress(count(1), map(partial(eq, player), colors)))
+
+    # Triggers at terminal node, value of -100 for win for blue (player), 100 for red (bot)
+    if not possible:
+        if player == Color.BLUE: # Player loses 
+            return 100, []
+        else: # Bot loses
+            return -100, []
+    
+    eval = [] # List of evaluations (branch, value) for every subsequent 'games' that could occur next 
+
+    # Searches through every game in an dfs manner (implement alpha-beta pruning later)
+    for branch in possible:
+        chosen = branch 
+        edges, colors = get_edges(get_branches(edges, colors, chosen))
+
+        # dfs occurs
+        value, moves = simulated_game(edges, colors, player.other)
+
+        # moves are the set of branches cut assuming perfect play from both parties
+        moves.append(branch)
+        eval.append(moves, value)
+
+    # Minimizing agent (player)
+    if player == Color.Blue:
+
+
+
+
+def minmax(node, depth, color): # Why is there an error?
+    '''Minmax algorithm implemented with recursion. 
+    The depth value should only matter when the bot has a losing position to prolong the game. 
+    The node variable is equivalent to a possible game state. 
+    '''
+    return 
 
 # add branches for simulation
 edges, colors = zip(*(
@@ -148,3 +195,4 @@ drawer(edges, colors)
 
 # start the game
 game(edges, colors, Color.BLUE, drawer)
+
