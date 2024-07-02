@@ -1,11 +1,12 @@
 # https://www.javatpoint.com/mini-max-algorithm-in-ai (contains pseudo code for minimax algo)
 
 # Minmax at line 155
-# TODO - bot is what color
-# - which color is associated with which value of terminal nodes
+# TODO 
 # - implement alpha-beta pruning
 # - Currently im writing the code where the simulated_game function does all the work, 
 # theres probably a way to use both functions later 
+# change win/loss ratio scale based on length of game (maybe even complexity)
+# Automatic level creator
 
 from collections import defaultdict, deque
 from functools import partial
@@ -115,8 +116,12 @@ def game(edges, colors, player: Color, drawer):
         return
 
     # get a branch to cut
-    chosen = get_branch_choice(possible, player)
-
+    # implementation of the bot
+    if player == Color.BLUE: # player
+        chosen = get_branch_choice(possible, player)
+    else:
+        value, moves = simulated_game(edges, colors, player)
+        chosen = moves[-1]
     # exit if requested
     if chosen is None:
         return
@@ -151,15 +156,22 @@ def simulated_game(edges, colors, player: Color):
 
         # dfs occurs
         value, moves = simulated_game(edges, colors, player.other)
-
+        # The longer the game, the more equal it is
+        if value > 0:
+            value -= 1
+        else:
+            value += 1
         # moves are the set of branches cut assuming perfect play from both parties
         moves.append(branch)
-        eval.append(moves, value)
+        eval.append((value, moves))
 
     # Minimizing agent (player)
-    if player == Color.Blue:
-
-
+    if player == Color.BLUE:
+        value, moves = min(eval, key = lambda t: t[1])
+        return value, moves
+    else: # Maximising 
+        value, moves = max(eval, key = lambda t:t[1])
+        return value, moves
 
 
 def minmax(node, depth, color): # Why is there an error?
@@ -194,5 +206,7 @@ drawer = partial(draw_graph, graph, pos)
 drawer(edges, colors)
 
 # start the game
+
 game(edges, colors, Color.BLUE, drawer)
 
+#print(simulated_game(edges, colors, Color.BLUE))
