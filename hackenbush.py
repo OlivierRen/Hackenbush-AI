@@ -192,6 +192,24 @@ edges, colors = zip(*(
     ((5, 6), Color.B)
 ))
 
+def level_maker():
+    existing_nodes = 0 # Highest node value that exist, nodes are created in counting order
+    
+    while True:
+        start_n = -1
+        while 0 > start_n or start_n > existing_nodes:
+            start_n = input(f"Please choose a starting node {existing_nodes}: ")
+        end_n = -1
+        while 0 > start_n or start_n > existing_nodes + 1:
+            end_n = input()
+
+def rando_level_maker(red_br, blue_br):
+    '''Creates a random level by alternating between adding a blue branch and 
+    a red branch to an empty level. '''
+    
+    existing_nodes = [0] # the possible nodes are always the number of existing nodes +1
+
+
 # reorder the edges to draw them correctly
 edges, colors = get_edges(get_branches(edges, colors))
 
@@ -203,10 +221,36 @@ pos = nx.bfs_layout(graph, 0, align="horizontal")
 drawer = partial(draw_graph, graph, pos)
 
 # draw the graph
-drawer(edges, colors)
+#drawer(edges, colors)
 
 # start the game
 
-game(edges, colors, Color.BLUE, drawer)
+#game(edges, colors, Color.BLUE, drawer)
 
 #print(simulated_game(edges, colors, Color.BLUE))
+
+def main():
+    print('Welcome to Hackenbush!')
+    choice = None
+    while choice not in ['1', '2', '3', '4']:
+        choice = input('''Please select one of the following:
+                       1. Play the premade level against another player.
+                       2. Play the premade level against the bot. 
+                       3. Make your own level. 
+                       4. Play a randomly generated level.
+                       5. Quit.
+                       Enter your choice (1,2,3,4): ''')
+    match int(choice):
+        case 1: # currently it is same as against bot
+            game(edges, colors, Color.BLUE, drawer)
+        case 2:
+            game(edges, colors, Color.BLUE, drawer)
+        case 3:
+            pass
+        case 4:
+            pass
+        case 5:
+            quit()
+
+if __name__ == '__main__':
+    main()
