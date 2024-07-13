@@ -17,6 +17,8 @@ from enum import StrEnum
 import matplotlib.pyplot as plt
 import networkx as nx
 
+import random
+
 
 class Color(StrEnum):
     R = RED = "red"
@@ -105,7 +107,7 @@ def get_branch_choice(possible, player):
         return chosen
 
 
-def game(edges, colors, player: Color, drawer):
+def game(edges, colors, player: Color, drawer, bot):
     """play a game of hackenbush"""
     # get a list of all the branches of the correct color
     possible = list(compress(count(1), map(partial(eq, player), colors)))
@@ -117,11 +119,14 @@ def game(edges, colors, player: Color, drawer):
 
     # get a branch to cut
     # implementation of the bot
-    if player == Color.BLUE: # player
-        chosen = get_branch_choice(possible, player)
-    else:
-        value, moves = simulated_game(edges, colors, player)
+    if bot == player: # player
+        
+        value, moves = simulated_game(edges, colors, player, float('-inf'), float('inf'))
         chosen = moves[-1]
+        print(f"The value of the move is {value}.")
+    
+    else:
+        chosen = get_branch_choice(possible, player)
     # exit if requested
     if chosen is None:
         return
@@ -133,9 +138,9 @@ def game(edges, colors, player: Color, drawer):
     drawer(edges, colors)
 
     # continue the game
-    game(edges, colors, player.other, drawer)
+    game(edges, colors, player.other, drawer, bot)
 
-def simulated_game(edges, colors, player: Color):
+def simulated_game(edges, colors, player: Color, alpha, beta):
     '''Simulated game used by the minmax bot. If the position is won for blue, 
     it is a terminal node with value of +infinity, the inverse is true for read.'''
     possible = list(compress(count(1), map(partial(eq, player), colors)))
@@ -147,88 +152,162 @@ def simulated_game(edges, colors, player: Color):
         else: # Bot loses
             return -100, []
     
-    eval = [] # List of evaluations (branch, value) for every subsequent 'games' that could occur next 
-
+    if player == Color.B:
+        maxEval = float('-inf')
+        max_moves = None
+    else:
+        minEval = float('inf')
+        min_moves = None
     # Searches through every game in an dfs manner (implement alpha-beta pruning later)
     for branch in possible:
         chosen = branch 
         edges, colors = get_edges(get_branches(edges, colors, chosen))
 
         # dfs occurs
-        value, moves = simulated_game(edges, colors, player.other)
+        value, moves = simulated_game(edges, colors, player.other, alpha, beta)
+        
         # The longer the game, the more equal it is
         if value > 0:
             value -= 1
         else:
             value += 1
-        # moves are the set of branches cut assuming perfect play from both parties
+        
         moves.append(branch)
-        eval.append((value, moves))
 
-    # Minimizing agent (player)
-    if player == Color.BLUE:
-        value, moves = min(eval, key = lambda t: t[1])
-        return value, moves
-    else: # Maximising 
-        value, moves = max(eval, key = lambda t:t[1])
-        return value, moves
+        if player == Color.B: # Maximizing player
+            if value > maxEval:
+                maxEval = value
+                max_moves = moves
+
+            alpha = max(alpha, value)
+            if beta <= alpha:
+                break
+        else:
+            if value < minEval:
+                minEval = value
+                min_moves = moves
+            
+            beta = min(beta, value)
+            if beta <= alpha:
+                break
+    if player == Color.B:
+        return maxEval, max_moves
+    else:
+        return min, min_moves
 
 
-def minmax(node, depth, color): # Why is there an error?
-    '''Minmax algorithm implemented with recursion. 
-    The depth value should only matter when the bot has a losing position to prolong the game. 
-    The node variable is equivalent to a possible game state. 
-    '''
-    return 
 
-# add branches for simulation
-edges, colors = zip(*(
-    ((0, 1), Color.B),
-    ((1, 2), Color.R),
-    ((1, 3), Color.B),
-    ((3, 4), Color.R),
-
-    ((0, 5), Color.R),
-    ((5, 6), Color.B)
-))
 
 def level_maker():
     existing_nodes = 0 # Highest node value that exist, nodes are created in counting order
-    
+    edges = []
+    colors = []
     while True:
+        # Assign branch color
+        color = None
+        while color not in ['r', 'b', "R", "B"]:
+            color = input("Please input a color (r, b): ")
+        if color == 'b' or color == 'B':
+            color = Color.B
+        else:
+            color = Color.R
+        colors.append(color)
+
+        # Assign edge
         start_n = -1
         while 0 > start_n or start_n > existing_nodes:
-            start_n = input(f"Please choose a starting node {existing_nodes}: ")
+            try:
+                start_n = int(input(f"Please choose a starting node {[n for n in range(existing_nodes+1)]}: "))
+            except TypeError:
+                print("Please input a valid node.")
         end_n = -1
-        while 0 > start_n or start_n > existing_nodes + 1:
-            end_n = input()
+        while 0 > end_n or end_n > existing_nodes + 1 or end_n == start_n:
+            try:
+                end_n = int(input(f"Please choose an end node {[n for n in range(existing_nodes+2) if n != start_n]}: "))
+            except TypeError:
+                print("Please input a valid node.")
+        edges.append((start_n, end_n))
+        # update list of nodes
+        if end_n > existing_nodes:
+            existing_nodes += 1
+
+        if input("Do you wish to exit? (y, n): ")[0] in ['y', 'Y']:
+            break
+    return edges, colors
+
 
 def rando_level_maker(red_br, blue_br):
     '''Creates a random level by alternating between adding a blue branch and 
     a red branch to an empty level. '''
     
-    existing_nodes = [0] # the possible nodes are always the number of existing nodes +1
+    colors = []
+    edges = []
+    color = Color.R
+    existing_nodes = 0 # the possible nodes are always the number of existing nodes +1
+    while red_br > 0 or blue_br > 0:
+        colors.append(color)
+        if color == Color.R:
+            red_br -= 1
+            if blue_br != 0:
+                color = Color.B
+        else:
+            blue_br -= 1
+            if red_br != 0:
+                color = Color.R
+
+        start_n = random.randint(0, existing_nodes)
+        end_n = random.randint(0, existing_nodes+1)
+        while end_n == start_n or ((start_n, end_n) in edges):
+            end_n = random.randint(0, existing_nodes + 1)
+        if end_n == existing_nodes + 1:
+            existing_nodes += 1
+        edges.append((start_n, end_n))
+    print(edges)
+    print(colors)
+    return edges, colors
 
 
-# reorder the edges to draw them correctly
-edges, colors = get_edges(get_branches(edges, colors))
 
-# create a graph
-graph = nx.Graph(edges)
+# add branches for simulation
+def premade(num):
+    match num:
+        case 1: # Level 1
+            edges, colors = zip(*(
+                ((0, 1), Color.B),
+                ((1, 2), Color.R),
+                ((1, 3), Color.B),
+                ((3, 4), Color.R),
 
-# set the way the graph is displayed
-pos = nx.bfs_layout(graph, 0, align="horizontal")
-drawer = partial(draw_graph, graph, pos)
+                ((0, 5), Color.R),
+                ((5, 6), Color.B)
+            ))
+    return edges, colors
 
-# draw the graph
-#drawer(edges, colors)
+#edges, colors = level_maker()
 
+#edges, colors = rando_level_maker(10, 10)
+#print(edges, colors)
+
+def make_game(edges, colors):
+    # reorder the edges to draw them correctly
+    edges, colors = get_edges(get_branches(edges, colors))
+
+    # create a graph
+    graph = nx.Graph(edges)
+
+    # set the way the graph is displayed
+    pos = nx.bfs_layout(graph, 0, align="horizontal")
+    drawer = partial(draw_graph, graph, pos)
+
+    # draw the graph
+    drawer(edges, colors)
+    return edges, colors, drawer
 # start the game
 
-#game(edges, colors, Color.BLUE, drawer)
+
 
 #print(simulated_game(edges, colors, Color.BLUE))
-
+''''''
 def main():
     print('Welcome to Hackenbush!')
     choice = None
@@ -239,16 +318,31 @@ def main():
                        3. Make your own level. 
                        4. Play a randomly generated level.
                        5. Quit.
-                       Enter your choice (1,2,3,4): ''')
+                       Enter your choice (1,2,3,4,5): ''')
     match int(choice):
         case 1: # currently it is same as against bot
-            game(edges, colors, Color.BLUE, drawer)
+            edges, colors = premade(1)
+            edges, colors, drawer = make_game(edges, colors)
+            game(edges, colors, Color.BLUE, drawer, None)
         case 2:
-            game(edges, colors, Color.BLUE, drawer)
+            bot = None
+            while bot not in ['b', 'B', 'r', 'R']:
+                bot = input("Please select the bot color (r, b): ")
+            if bot in ['r', 'R']:
+                bot = Color.R
+            else:
+                bot = Color.B
+            edges, colors = premade(1)
+            edges, colors, drawer = make_game(edges, colors)
+            game(edges, colors, Color.BLUE, drawer, bot)
         case 3:
-            pass
+            edges, colors = level_maker()
+            edges, colors, drawer - make_game(edges, colors)
+            game(edges, colors, Color.BLUE, drawer, None)
         case 4:
-            pass
+            edges, colors = rando_level_maker(10,10)
+            edges, colors, drawer = make_game(edges, colors)
+            game(edges, colors, Color.BLUE, drawer, None)
         case 5:
             quit()
 
